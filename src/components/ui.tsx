@@ -58,7 +58,7 @@ export type FNode = { id: string; col: number; row: number; title: string; sub?:
 export type FEdge = { from: string; to: string; label: string };
 
 export function FlowMap({ nodes, edges, cols, rows, ariaLabel }: { nodes: FNode[]; edges: FEdge[]; cols: number; rows: number; ariaLabel: string }) {
-  const W = 190, H = 64, GX = 70, GY = 34, PAD = 10;
+  const W = 190, H = 64, GX = 120, GY = 34, PAD = 10;
   const width = cols * W + (cols - 1) * GX + PAD * 2;
   const height = rows * H + (rows - 1) * GY + PAD * 2;
   const pos = Object.fromEntries(nodes.map((n) => [n.id, { x: PAD + n.col * (W + GX), y: PAD + n.row * (H + GY) }]));
@@ -80,13 +80,15 @@ export function FlowMap({ nodes, edges, cols, rows, ariaLabel }: { nodes: FNode[
           else { x1 = a.x; y1 = a.y + H / 2; x2 = b.x + W; y2 = b.y + H / 2; }
           const mx = (x1 + x2) / 2;
           const d = a.x === b.x ? `M${x1},${y1} L${x2},${y2 + (y2 > y1 ? -2 : 2)}` : `M${x1},${y1} L${mx},${y1} L${mx},${y2} L${x2 + (x2 > x1 ? -2 : 2)},${y2}`;
-          // label sits on the final segment, next to the box it points at
-          const lx = a.x === b.x ? x1 + 8 : (mx + x2) / 2;
-          const ly = a.x === b.x ? (y1 + y2) / 2 + 4 : y2 - 7;
+          // label on the final segment, next to the box it points at; when several arrows meet at one
+          // box, label each on its first segment instead so they don't stack up
+          const merging = edges.filter((o) => o.to === e.to).length > 1;
+          const lx = a.x === b.x ? x1 + 8 : merging ? x1 + 6 : x2 - 8;
+          const ly = a.x === b.x ? (y1 + y2) / 2 + 4 : merging ? y1 - 7 : y2 - 7;
           return (
             <g key={i}>
               <path d={d} fill="none" stroke="var(--muted)" strokeWidth={1.3} markerEnd="url(#arrow)" />
-              <text x={lx} y={ly} fontSize={12} fill="var(--text)" textAnchor={a.x === b.x ? "start" : "middle"}
+              <text x={lx} y={ly} fontSize={12} fill="var(--text)" textAnchor={a.x === b.x || merging ? "start" : "end"}
                 style={{ paintOrder: "stroke", stroke: "var(--panel)", strokeWidth: 5, strokeLinejoin: "round" }}>{e.label}</text>
             </g>
           );

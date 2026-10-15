@@ -1,5 +1,6 @@
 import data from "@/data/cards.json";
 import { TimeChart } from "@/components/charts";
+import GradeLabel from "@/components/grade-label";
 import { AddressTable, BarList, FlowMap, Kpi, Panel, Section, Steps } from "@/components/ui";
 import { n0, pct, usd, compact, dayLabel } from "@/lib/fmt";
 
@@ -31,12 +32,15 @@ const ADDRESSES = [
 export default function Page() {
   return (
     <main className="mx-auto max-w-[1100px] px-4 py-8 sm:px-6">
-      <header className="flex flex-wrap items-end justify-between gap-2 border-b border-line pb-5">
+      <header className="flex items-center justify-between gap-4 border-b border-line pb-5">
         <div>
           <h1 className="text-[26px] font-semibold text-text">Collector Crypt dashboard</h1>
-          <p className="mt-1 text-[14.5px] text-muted">Gacha machines for graded trading cards: players buy packs in USDC, get a real card as an NFT, and can sell it straight back.</p>
+          <p className="mt-1 max-w-[60ch] text-[14.5px] text-muted">Gacha machines for graded trading cards: players buy packs in USDC, get a real card as an NFT, and can sell it straight back.</p>
+          <p className="mt-2 text-[13px] text-muted">Data through {dayLabel(cov.to ?? "")}</p>
         </div>
-        <p className="text-[13px] text-muted">Data through {dayLabel(cov.to ?? "")}</p>
+        <div className="hidden sm:block">
+          <GradeLabel top="Collector Crypt" line2={`Pack sales, ${cov.days} days`} grade={usd(T.sales)} gradeSub={`${pct(T.buybacks / T.sales, 0)} bought back`} cert="GachaNgyXTU3zFogQ8Z5jR2BLXs8215X2AtEH18VxJq3" />
+        </div>
       </header>
 
       <Section title="Key numbers" sub={`Pack figures cover ${windowLabel} (${cov.days} days). Older history is still loading and gets added daily.`}>
