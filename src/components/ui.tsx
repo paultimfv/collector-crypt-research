@@ -20,12 +20,20 @@ export function Section({ title, sub, children }: { title: string; sub?: string;
   );
 }
 
-export function Panel({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
+export type Src = { label: string; href: string };
+
+export function Panel({ title, sub, source, children }: { title: string; sub?: string; source?: Src[]; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-line bg-panel p-4">
       <div className="text-[15px] font-semibold text-text">{title}</div>
       {sub && <div className="mt-0.5 text-[13px] text-muted">{sub}</div>}
       <div className="mt-3">{children}</div>
+      {source && (
+        <div className="mt-2 text-[12px] text-muted">
+          Source:{" "}
+          {source.map((s, i) => <span key={s.href}>{i > 0 && ", "}<a className="underline hover:text-text" href={s.href} target="_blank" rel="noreferrer">{s.label}</a></span>)}
+        </div>
+      )}
     </div>
   );
 }

@@ -9,9 +9,14 @@ export const metadata: Metadata = {
   description: "Collector Crypt gacha pack sales, buybacks and the CARDS token, read directly from the chain.",
 };
 
+const THEME_INIT = `try{var t=localStorage.getItem("theme");if(!t)t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.dataset.theme=t}catch(e){}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );
