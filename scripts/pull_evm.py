@@ -49,9 +49,23 @@ def deploy_block(url, head):
     return lo
 
 
+def block_at(url, ts, head):
+    """First block at or after unix time ts (binary search on block timestamps)."""
+    lo, hi = 0, head
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if int(call(url, "eth_getBlockByNumber", [hex(mid), False])["timestamp"], 16) < ts:
+            lo = mid + 1
+        else:
+            hi = mid
+    return lo
+
+
 def pull_robinhood():
     head = int(call(RH_RPC, "eth_blockNumber", []), 16)
-    start, step = 0, 2_000_000  # RPC has no historical state for a getCode search; logs scan is cheap
+    # the RPC keeps no historical state (no getCode search), so start a few days before the machine's
+    # 2026-09-25 launch, found by block timestamp
+    start, step = block_at(RH_RPC, 1789862400, head), 500_000
     rows, ts_cache, b = [], {}, start
     while b <= head:
         e = min(b + step - 1, head)

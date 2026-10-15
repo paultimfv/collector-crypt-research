@@ -164,8 +164,9 @@ def main():
     supply = int(rpc("getAccountInfo", [CARDS, {"encoding": "jsonParsed"}])["value"]["data"]["parsed"]["info"]["supply"]) / 1e6
     float_usdc = float(rpc("getTokenAccountBalance", [GACHA_USDC_ACCOUNT])["value"]["uiAmountString"])
 
-    cut = (dt.date.fromisoformat(days[-1]) - dt.timedelta(days=30)).isoformat() if days else ""
-    l30 = [s for s in series if cut < s["d"] < days[-1]]
+    # trailing window = last 30 complete days that the gacha pull covers (today is partial)
+    cov_days = [d for d in days_covered if (ROOT / f"data/raw/gacha/{d}.done").exists()]
+    l30 = [s for s in series if s["d"] in set(cov_days[-30:])]
     s30 = lambda f: sum(s[f] for s in l30)
     burned_total = sum(s["cardsBurned"] for s in series)
     price_rows = [s for s in series if s["cardsBought"]]
@@ -179,25 +180,29 @@ def main():
         for st, v in s["stores"].items():
             weekly[w]["st_" + st] += v
 
+    # headline totals only over the window the gacha pull fully covers
+    lo, hi = (days_covered[0], days_covered[-1]) if days_covered else ("", "")
+    cov_series = [s for s in series if lo <= s["d"] <= hi]
+
     out = {
         "generatedAt": dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes"),
         "coverage": {"from": days_covered[0] if days_covered else None, "to": days_covered[-1] if days_covered else None,
                      "days": len(days_covered)},
         "totals": {
-            "sales": round(sum(s["sales"] for s in series)),
-            "solanaSales": round(sum(s["solana"] for s in series)),
-            "fiatSales": round(sum(s["fiat"] for s in series)),
-            "packs": sum(s["packs"] for s in series),
-            "buybacks": round(sum(s["buybacks"] for s in series)),
-            "net": round(sum(s["net"] for s in series)),
-            "royalties": round(sum(s["royalties"] for s in series)),
+            "sales": round(sum(s["sales"] for s in cov_series)),
+            "solanaSales": round(sum(s["solana"] for s in cov_series)),
+            "fiatSales": round(sum(s["fiat"] for s in cov_series)),
+            "packs": sum(s["packs"] for s in cov_series),
+            "buybacks": round(sum(s["buybacks"] for s in cov_series)),
+            "net": round(sum(s["net"] for s in cov_series)),
+            "royalties": round(sum(s["royalties"] for s in cov_series)),
             "buyers": len(buyer_spend),
-            "cardsBought": round(sum(s["cardsBought"] for s in series)),
+            "cardsBought": round(sum(s["cardsBought"] for s in series)),  # all-time: the bot history is complete
             "cardsBoughtUsd": round(sum(s["cardsBoughtUsd"] for s in series)),
             "cardsBurned": round(burned_total),
-            "toCardsBuyback": round(sum(D[k]["to_cards_buyback"] for k in days)),
-            "teamOut": round(sum(D[k]["team_out"] for k in days)),
-            "teamIn": round(sum(D[k]["team_in"] for k in days)),
+            "toCardsBuyback": round(sum(D[k]["to_cards_buyback"] for k in days if lo <= k <= hi)),
+            "teamOut": round(sum(D[k]["team_out"] for k in days if lo <= k <= hi)),
+            "teamIn": round(sum(D[k]["team_in"] for k in days if lo <= k <= hi)),
         },
         "last30": {"days": len(l30), "sales": s30("sales"), "buybacks": s30("buybacks"), "net": s30("net"), "packs": s30("packs"),
                    "cardsBoughtUsd": s30("cardsBoughtUsd")},
