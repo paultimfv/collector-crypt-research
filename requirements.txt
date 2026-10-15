@@ -1,0 +1,5 @@
+requests
+python-dotenv
+base58
+pycryptodome
+solders

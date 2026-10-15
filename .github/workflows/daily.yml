@@ -1,0 +1,36 @@
+name: daily refresh
+on:
+  schedule:
+    - cron: "0 7 * * *"     # 07:00 UTC
+  workflow_dispatch:
+concurrency: daily
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - name: pull and build
+        working-directory: scripts
+        env:
+          HELIUS_KEY: ${{ secrets.HELIUS_KEY }}
+          ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY }}
+        run: |
+          python -u pull_wallets.py
+          python -u pull_evm.py
+          # newest days first; whatever budget is left keeps extending the history backwards
+          python -u pull_gacha.py 2024-11-21 6 --budget 75
+          python build_cards.py > /dev/null
+      # the push redeploys the site (Vercel is connected to this repo)
+      - name: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/raw src/data
+          git diff --cached --quiet || git commit -m "data: daily refresh $(date -u +%F)"
+          git push
