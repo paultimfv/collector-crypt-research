@@ -1,0 +1,5 @@
+/data
+/scripts
+/.venv
+.env
+.env.*
