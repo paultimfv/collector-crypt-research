@@ -8,7 +8,9 @@ Rules (same spirit as Laso's deposit rules):
   4. Card-payment (fiat) sales arrive bundled into the fiat-rail wallet from the payment processor; counted there.
   5. EVM: Paid events are sales, SoldBack events are buybacks; team addresses excluded.
 """
-import csv, glob, json, base64, struct, datetime as dt
+import csv, glob, json, base64, struct, re, datetime as dt
+
+HEX_ID = re.compile(r"[0-9a-f]{6,}")
 from collections import defaultdict
 from common import ROOT, rpc
 from addresses import TEAM, EVM_TEAM, BUYBACK_BOT, CARDS, GACHA_USDC_ACCOUNT, TREASURY
@@ -59,6 +61,8 @@ def main():
                 buyer_spend[cp] += amt
                 buyer_first.setdefault(cp, d)
                 s = r["storefront"] or "direct"
+                if HEX_ID.fullmatch(s):   # pre-storefront memos carry a per-payment hex id, not a store name
+                    s = "untagged"
                 store_sales[s] += amt
                 store_packs[s] += 1
                 x[f"store:{s}"] += amt
