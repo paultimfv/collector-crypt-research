@@ -12,6 +12,7 @@ import csv, glob, json, base64, struct, re, datetime as dt
 
 HEX_ID = re.compile(r"[0-9a-f]{6,}")
 from collections import defaultdict
+from pathlib import Path
 from common import ROOT, rpc
 from addresses import TEAM, EVM_TEAM, BUYBACK_BOT, CARDS, GACHA_USDC_ACCOUNT, TREASURY
 
@@ -34,6 +35,50 @@ def read(path):
         return []
 
 
+
+SUMMARY_DAYS = ROOT / "data/summary/gacha_days.json"
+SUMMARY_BUYERS = ROOT / "data/summary/gacha_buyers.json"
+
+
+def gacha_file(path):
+    """One raw gacha day file -> (summary, buyers). Same rules as always: team transfers are internal, the buyback bot
+    is CARDS buybacks, everything else in is a pack sale and everything else out is a card buyback."""
+    D = defaultdict(lambda: defaultdict(float))
+    g = {k: defaultdict(int if k.endswith("_packs") else float) for k in ("store_sales", "store_packs", "tier_sales", "tier_packs", "internal_out")}
+    buyers = {}
+    for r in csv.DictReader(open(path)):
+        amt, cp, d = float(r["amount"]), r["counterparty"], day(r["ts"])
+        x = D[d]
+        if r["dir"] == "in":
+            if cp in TEAM:
+                x["team_in"] += amt
+                continue
+            x["sales"] += amt
+            x["packs"] += 1
+            x["sales_sol"] += amt
+            spent, first = buyers.get(cp, (0.0, d))
+            buyers[cp] = (spent + amt, min(first, d))
+            s = r["storefront"] or "direct"
+            if HEX_ID.fullmatch(s):   # pre-storefront memos carry a per-payment hex id, not a store name
+                s = "untagged"
+            g["store_sales"][s] += amt
+            g["store_packs"][s] += 1
+            x[f"store:{s}"] += amt
+            t = str(amt) if amt in TIERS else "other"
+            g["tier_packs"][t] += 1
+            g["tier_sales"][t] += amt
+        else:
+            if cp == BUYBACK_BOT:
+                x["to_cards_buyback"] += amt
+            elif cp in TEAM:
+                g["internal_out"][cp] += amt
+                x["team_out"] += amt
+            else:
+                x["buybacks"] += amt
+                x["buyback_n"] += 1
+    return {"D": {k: dict(v) for k, v in D.items()}, **{k: dict(v) for k, v in g.items()}}, buyers
+
+
 def main():
     D = defaultdict(lambda: defaultdict(float))
     buyer_spend = defaultdict(float)
@@ -45,39 +90,47 @@ def main():
     internal_out = defaultdict(float)
     days_covered = []
 
-    for f in sorted(glob.glob(str(ROOT / "data/raw/gacha/*.csv"))):
-        d0 = f.rsplit("/", 1)[1][:10]
+    # Gacha: finished days are summarised once into data/summary/ (small, in git); only days without a summary are read
+    # from raw files. So the hourly job needs just the last few raw days, never the whole 1.7 GB history.
+    summ = json.loads(SUMMARY_DAYS.read_text()) if SUMMARY_DAYS.exists() else {}
+    bsum = json.loads(SUMMARY_BUYERS.read_text()) if SUMMARY_BUYERS.exists() else {"days": [], "spend": {}, "first": {}}
+    raw = {Path(f).name[:10]: f for f in glob.glob(str(ROOT / "data/raw/gacha/*.csv"))}
+    today = dt.datetime.now(dt.timezone.utc).date()
+    settled = (today - dt.timedelta(days=2)).isoformat()   # days before this are final and get summarised
+    buyer_spend.update(bsum["spend"]); buyer_first.update(bsum["first"])
+    fold_spend, fold_first = dict(bsum["spend"]), dict(bsum["first"])   # settled days only: what the buyers file stores
+    in_bsum, changed = set(bsum["days"]), False
+    for d0 in sorted(set(summ) | set(raw)):
+        if d0 in summ and not (d0 in raw and d0 >= settled):
+            g = summ[d0]
+        else:
+            g, buyers = gacha_file(raw[d0])
+            if d0 not in in_bsum:   # buyers of days not yet folded into the cumulative file
+                for cp, (amt, first) in buyers.items():
+                    buyer_spend[cp] = buyer_spend.get(cp, 0) + amt
+                    buyer_first[cp] = min(buyer_first.get(cp, first), first)
+            if d0 < settled and (ROOT / f"data/raw/gacha/{d0}.done").exists():
+                summ[d0] = g; changed = True
+                if d0 not in in_bsum:
+                    for cp, (amt, first) in buyers.items():
+                        fold_spend[cp] = fold_spend.get(cp, 0) + amt
+                        fold_first[cp] = min(fold_first.get(cp, first), first)
+                    in_bsum.add(d0)
         days_covered.append(d0)
-        for r in csv.DictReader(open(f)):
-            amt, cp, d = float(r["amount"]), r["counterparty"], day(r["ts"])
-            x = D[d]
-            if r["dir"] == "in":
-                if cp in TEAM:
-                    x["team_in"] += amt
-                    continue
-                x["sales"] += amt
-                x["packs"] += 1
-                x["sales_sol"] += amt
-                buyer_spend[cp] += amt
-                buyer_first.setdefault(cp, d)
-                s = r["storefront"] or "direct"
-                if HEX_ID.fullmatch(s):   # pre-storefront memos carry a per-payment hex id, not a store name
-                    s = "untagged"
-                store_sales[s] += amt
-                store_packs[s] += 1
-                x[f"store:{s}"] += amt
-                t = amt if amt in TIERS else "other"
-                tier_packs[t] += 1
-                tier_sales[t] += amt
-            else:
-                if cp == BUYBACK_BOT:
-                    x["to_cards_buyback"] += amt
-                elif cp in TEAM:
-                    internal_out[cp] += amt
-                    x["team_out"] += amt
-                else:
-                    x["buybacks"] += amt
-                    x["buyback_n"] += 1
+        for k, fields in g["D"].items():
+            for f2, v in fields.items():
+                D[k][f2] += v
+        for name, acc in (("store_sales", store_sales), ("store_packs", store_packs), ("tier_sales", tier_sales),
+                          ("tier_packs", tier_packs), ("internal_out", internal_out)):
+            for k, v in g[name].items():
+                acc[k if name not in ("tier_sales", "tier_packs") or k == "other" else float(k)] += v
+    if changed:
+        SUMMARY_DAYS.parent.mkdir(parents=True, exist_ok=True)
+        SUMMARY_DAYS.write_text(json.dumps(summ, separators=(",", ":"), sort_keys=True))
+        bsum["spend"] = {cp: round(fold_spend[cp], 2) for cp in sorted(fold_spend)}
+        bsum["first"] = {cp: fold_first[cp] for cp in bsum["spend"]}
+        bsum["days"] = sorted(in_bsum)
+        SUMMARY_BUYERS.write_text(json.dumps(bsum, separators=(",", ":")))
 
     # fiat rail: bundled card-payment sales from outside the team
     for r in read(ROOT / "data/raw/wallets/fiat_rail.csv"):
@@ -165,11 +218,16 @@ def main():
             lorenz.append({"top": i + 1, "share": round(acc / total_spend, 4)})
 
     # live snapshot
-    supply = int(rpc("getAccountInfo", [CARDS, {"encoding": "jsonParsed"}])["value"]["data"]["parsed"]["info"]["supply"]) / 1e6
-    float_usdc = float(rpc("getTokenAccountBalance", [GACHA_USDC_ACCOUNT])["value"]["uiAmountString"])
+    try:
+        supply = int(rpc("getAccountInfo", [CARDS, {"encoding": "jsonParsed"}])["value"]["data"]["parsed"]["info"]["supply"]) / 1e6
+        float_usdc = float(rpc("getTokenAccountBalance", [GACHA_USDC_ACCOUNT])["value"]["uiAmountString"])
+    except Exception as e:   # an RPC hiccup shouldn't fail the build: keep the last snapshot (the site reads these live anyway)
+        print(f"live snapshot skipped ({str(e)[:80]})")
+        prev = json.loads((ROOT / "src/data/cards.json").read_text())["live"]
+        supply, float_usdc = prev["supply"], prev["gachaFloat"]
 
     # trailing window = last 30 complete days that the gacha pull covers (today is partial)
-    cov_days = [d for d in days_covered if (ROOT / f"data/raw/gacha/{d}.done").exists()]
+    cov_days = [d for d in days_covered if d in summ or (ROOT / f"data/raw/gacha/{d}.done").exists()]
     l30 = [s for s in series if s["d"] in set(cov_days[-30:])]
     s30 = lambda f: sum(s[f] for s in l30)
     burned_total = sum(s["cardsBurned"] for s in series)

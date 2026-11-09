@@ -15,14 +15,6 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt
-      # Raw per-day gacha files (~180 MB a month) live in the Actions cache, not in git. A new cache is saved each run;
-      # the newest one is restored next run. If it's ever evicted, pull_gacha rebuilds history newest-first over a few runs.
-      - name: restore raw gacha days
-        uses: actions/cache/restore@v4
-        with:
-          path: data/raw/gacha
-          key: gacha-raw-${{ github.run_id }}
-          restore-keys: gacha-raw-
       - name: pull and build
         working-directory: scripts
         env:
@@ -31,17 +23,11 @@ jobs:
         run: |
           python -u pull_wallets.py
           python -u pull_evm.py
-          # newest days first; whatever budget is left keeps extending the history backwards
-          python -u pull_gacha.py 2024-11-21 6 --budget 25
+          # finished days live as small summaries in data/summary/, so only the last 3 days are pulled raw
+          python -u pull_gacha.py $(date -u -d "3 days ago" +%F) 6 --budget 20
           python build_cards.py > /dev/null
-      - name: save raw gacha days
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: data/raw/gacha
-          key: gacha-raw-${{ github.run_id }}
       # the site reads src/data straight from this repo (re-checked every 5 min), so a push is enough: no redeploy.
-      # cards.json is only committed if it covers at least as many days as the one live, so a cold cache never shrinks the site.
+      # cards.json is only committed if it covers at least as many days as the one live, so a bad run never shrinks the site.
       - name: commit
         run: |
           git config user.name "github-actions[bot]"
@@ -49,7 +35,7 @@ jobs:
           live=$(git show HEAD:src/data/cards.json | python -c "import json,sys;print(json.load(sys.stdin)['coverage']['days'])")
           new=$(python -c "import json;print(json.load(open('src/data/cards.json'))['coverage']['days'])")
           echo "coverage: live $live days, this run $new days"
-          git add data/raw/wallets data/raw/evm_base.csv data/raw/evm_robinhood.csv
+          git add data/raw/wallets data/raw/evm_base.csv data/raw/evm_robinhood.csv data/summary
           if [ "$new" -ge "$live" ]; then git add src/data; fi
           git diff --cached --quiet || git commit -m "data: refresh $(date -u +%FT%H:%MZ)"
           git push

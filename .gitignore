@@ -7,5 +7,5 @@ __pycache__
 .vercel
 *.tsbuildinfo
 
-# raw per-day gacha files live in the GitHub Actions cache (see .github/workflows/daily.yml), not in git
+# raw per-day gacha files stay local; finished days are summarised into data/summary/ (in git)
 /data/raw/gacha/
