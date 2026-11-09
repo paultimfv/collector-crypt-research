@@ -38,4 +38,4 @@ jobs:
           git add data/raw/wallets data/raw/evm_base.csv data/raw/evm_robinhood.csv data/summary
           if [ "$new" -ge "$live" ]; then git add src/data; fi
           git diff --cached --quiet || git commit -m "data: refresh $(date -u +%FT%H:%MZ)"
-          git push
+          git pull --rebase && git push
