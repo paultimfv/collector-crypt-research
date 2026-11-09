@@ -23,7 +23,7 @@ async function rpc<T>(method: string, params: unknown[]): Promise<T> {
   }
 }
 
-export type Live = CardsData["live"] & { at: string; fresh: boolean; marketPrice: number | null; txLastHour: number | null };
+export type Live = CardsData["live"] & { at: string; fresh: boolean; marketPrice: number | null; txLastHour: number | null; txCapped?: boolean };
 
 export async function liveCards(snapshot: CardsData["live"], snapshotAt: string): Promise<Live> {
   const base: Live = { ...snapshot, at: snapshotAt, fresh: false, marketPrice: null, txLastHour: null };
@@ -40,6 +40,7 @@ export async function liveCards(snapshot: CardsData["live"], snapshotAt: string)
       ...base,
       supply: Math.round(supply), burnedBySupply: Math.round(MAX_SUPPLY - supply), gachaFloat: Math.round(Number(float.value.uiAmountString)),
       txLastHour: sigs.filter((s) => !s.err && (s.blockTime ?? 0) >= hourAgo).length,
+      txCapped: sigs.length >= 1000 && (sigs[sigs.length - 1].blockTime ?? 0) >= hourAgo,   // one call returns at most 1,000
       at: new Date().toISOString(), fresh: true,
     };
   } catch (e) {

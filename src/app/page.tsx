@@ -75,7 +75,7 @@ export default async function Page() {
       </header>
 
       <Section title="Sales, buybacks and CARDS" sub={L.fresh
-        ? `${windowLabel}, updated hourly. Live from Solana at ${L.at.slice(11, 16)} UTC: ${n0(L.txLastHour ?? 0)} gacha transactions in the last hour, ${usd(L.gachaFloat)} USDC in the machine.`
+        ? `${windowLabel}, updated hourly. Live from Solana at ${L.at.slice(11, 16)} UTC: ${L.txCapped ? "1,000+" : n0(L.txLastHour ?? 0)} gacha transactions in the last hour, ${usd(L.gachaFloat)} USDC in the machine.`
         : `${windowLabel}, updated hourly.`}>
         <div className="kpis grid grid-cols-2 md:grid-cols-4">
           <Kpi label="Pack sales" value={usd(T.sales)} note={`${n0(T.packs)} packs`} />
