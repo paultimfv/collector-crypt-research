@@ -24,19 +24,19 @@ export function TimeChart({ rows, series, unit = "", height = 260, prefix = "" }
   const fmtFull = (v: number) => `${prefix}${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: Math.abs(v) < 10 ? 2 : 0 })}${unit ? " " + unit : ""}`;
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <ComposedChart data={rows} stackOffset="sign" margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap={1}>
-        <CartesianGrid stroke="var(--line)" vertical={false} />
-        <XAxis dataKey="d" stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={tick} minTickGap={50} />
-        <YAxis stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} width={50} tickFormatter={(v) => `${prefix}${short(v)}`} />
+      <ComposedChart data={rows} stackOffset="sign" margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barCategoryGap={1}>
+        <CartesianGrid stroke="var(--line)" strokeDasharray="1 3" vertical={false} />
+        <XAxis dataKey="d" stroke="var(--muted)" fontSize={11.5} fontFamily="var(--font-num)" tickLine={false} axisLine={{ stroke: "var(--text)" }} tickFormatter={tick} minTickGap={50} />
+        <YAxis orientation="right" stroke="var(--muted)" fontSize={11.5} fontFamily="var(--font-num)" tickLine={false} axisLine={false} width={50} tickFormatter={(v) => `${prefix}${short(v)}`} />
         <ReferenceLine y={0} stroke="var(--line)" />
         <Tooltip
-          cursor={{ fill: "var(--text)", fillOpacity: 0.05 }}
-          contentStyle={{ background: "var(--raise)", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13 }}
-          labelStyle={{ color: "var(--muted)" }}
+          cursor={{ fill: "var(--text)", fillOpacity: 0.06 }}
+          contentStyle={{ background: "var(--text)", border: 0, borderRadius: 2, fontSize: 12.5, fontFamily: "var(--font-num)", color: "var(--bg)" }}
+          labelStyle={{ color: "var(--bg)", fontWeight: 600 }} itemStyle={{ color: "var(--bg)", padding: 0 }}
           labelFormatter={(l) => new Date(String(l) + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}
           formatter={(v, name) => [fmtFull(Number(v)), name]}
         />
-        <Legend wrapperStyle={{ fontSize: 13, paddingTop: 6 }} iconType="circle" iconSize={8} />
+        <Legend verticalAlign="top" align="left" wrapperStyle={{ fontSize: 12.5, paddingBottom: 10 }} iconType="rect" iconSize={10} />
         {series.map((s) =>
           s.type === "bar"
             ? <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} stackId={s.stack} isAnimationActive={false} />

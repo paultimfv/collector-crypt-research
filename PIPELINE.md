@@ -11,7 +11,7 @@ the cut the machine keeps into the CARDS buyback and burn.
 ## The picture
 
 ```
- SOURCES                                        PIPELINE (Python, daily on GitHub)          DASHBOARD
+ SOURCES                                        PIPELINE (Python, hourly on GitHub)          DASHBOARD
 
  Solana gacha wallet stablecoin accounts ──────► pull_gacha.py ─► data/raw/gacha/DAY.csv ─┐
    (Helius + Alchemy getTransactionsForAddress)                                           │

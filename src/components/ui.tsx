@@ -1,21 +1,23 @@
-// Plain dashboard building blocks, shared by the ORE and Collector Crypt dashboards.
+// Dashboard building blocks, shared by the ORE and Collector Crypt dashboards. Structure only; each site's globals.css gives them its look.
 
 export function Kpi({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="rounded-lg border border-line bg-panel p-4">
-      <div className="text-[13px] text-muted">{label}</div>
-      <div className="mt-1 text-[26px] font-semibold leading-tight text-text">{value}</div>
-      {note && <div className="mt-1 text-[13px] leading-snug text-muted">{note}</div>}
+    <div className="kpi">
+      <div className="kpi-l">{label}</div>
+      <div className="kpi-v">{value}</div>
+      {note && <div className="kpi-n">{note}</div>}
     </div>
   );
 }
 
 export function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
   return (
-    <section className="mt-10">
-      <h2 className="text-[19px] font-semibold text-text">{title}</h2>
-      {sub && <p className="mt-1 max-w-[75ch] text-[14px] leading-relaxed text-muted">{sub}</p>}
-      <div className="mt-4">{children}</div>
+    <section className="sec mt-16">
+      <header className="sec-h">
+        <h2 className="sec-t">{title}</h2>
+        {sub && <p className="sec-l">{sub}</p>}
+      </header>
+      <div className="mt-5">{children}</div>
     </section>
   );
 }
@@ -24,17 +26,16 @@ export type Src = { label: string; href: string };
 
 export function Panel({ title, sub, source, children }: { title: string; sub?: string; source?: Src[]; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-line bg-panel p-4">
-      <div className="text-[15px] font-semibold text-text">{title}</div>
-      {sub && <div className="mt-0.5 text-[13px] text-muted">{sub}</div>}
-      <div className="mt-3">{children}</div>
+    <figure className="fig">
+      <figcaption className="fig-h"><span className="fig-t">{title}</span>{sub && <span className="fig-s">{sub}</span>}</figcaption>
+      {children}
       {source && (
         <div className="mt-2 text-[12px] text-muted">
           Source:{" "}
-          {source.map((s, i) => <span key={s.href}>{i > 0 && ", "}<a className="underline hover:text-text" href={s.href} target="_blank" rel="noreferrer">{s.label}</a></span>)}
+          {source.map((s, i) => <span key={s.href}>{i > 0 && ", "}<a className="underline decoration-line underline-offset-2 hover:text-text" href={s.href} target="_blank" rel="noreferrer">{s.label}</a></span>)}
         </div>
       )}
-    </div>
+    </figure>
   );
 }
 
@@ -42,17 +43,17 @@ export type Addr = { name: string; addr: string; role: string; href?: string };
 
 export function AddressTable({ rows }: { rows: Addr[] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-line">
+    <div className="fig overflow-x-auto">
       <table className="w-full min-w-[640px] text-left text-[14px]">
-        <thead className="bg-panel text-muted">
-          <tr><th className="px-4 py-2 font-normal">Name</th><th className="px-4 py-2 font-normal">Address</th><th className="px-4 py-2 font-normal">What it does</th></tr>
+        <thead className="text-muted">
+          <tr className="border-b border-text"><th className="py-2 pr-4 text-[12.5px] font-medium">Name</th><th className="py-2 pr-4 text-[12.5px] font-medium">Address</th><th className="py-2 text-[12.5px] font-medium">What it does</th></tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.addr} className="border-t border-line align-top">
-              <td className="px-4 py-2 whitespace-nowrap text-text">{r.name}</td>
-              <td className="px-4 py-2"><a className="text-accent underline" href={r.href ?? `https://solscan.io/account/${r.addr}`} target="_blank" rel="noreferrer">{r.addr.slice(0, 4)}…{r.addr.slice(-4)}</a></td>
-              <td className="px-4 py-2 text-muted">{r.role}</td>
+              <td className="py-2 pr-4 whitespace-nowrap text-text">{r.name}</td>
+              <td className="py-2 pr-4"><a className="text-accent underline" href={r.href ?? `https://solscan.io/account/${r.addr}`} target="_blank" rel="noreferrer">{r.addr.slice(0, 4)}…{r.addr.slice(-4)}</a></td>
+              <td className="py-2 text-muted">{r.role}</td>
             </tr>
           ))}
         </tbody>
@@ -71,7 +72,7 @@ export function FlowMap({ nodes, edges, cols, rows, ariaLabel }: { nodes: FNode[
   const height = rows * H + (rows - 1) * GY + PAD * 2;
   const pos = Object.fromEntries(nodes.map((n) => [n.id, { x: PAD + n.col * (W + GX), y: PAD + n.row * (H + GY) }]));
   return (
-    <div className="overflow-x-auto rounded-lg border border-line bg-panel p-3">
+    <div className="overflow-x-auto rounded-[3px] bg-panel p-3">
       <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full" style={{ minWidth: Math.min(width, 900) * 0.8 }} role="img" aria-label={ariaLabel}>
         <defs>
           <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
@@ -138,8 +139,8 @@ export function BarList({ rows, fmt }: { rows: { label: string; value: number }[
       {rows.map((r) => (
         <div key={r.label} className="grid grid-cols-[120px_1fr_80px] items-center gap-3 text-[14px]">
           <span className="truncate text-text">{r.label}</span>
-          <span className="h-2.5 rounded bg-raise"><span className="block h-2.5 rounded bg-accent" style={{ width: `${(r.value / max) * 100}%` }} /></span>
-          <span className="text-right text-text">{fmt(r.value)}</span>
+          <span className="h-3 bg-raise"><span className="block h-3 bg-accent" style={{ width: `${(r.value / max) * 100}%` }} /></span>
+          <span className="num text-right text-text">{fmt(r.value)}</span>
         </div>
       ))}
     </div>

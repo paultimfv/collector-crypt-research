@@ -1,22 +1,12 @@
-import data from "@/data/cards.json";
+import { getData } from "@/lib/data";
+import { liveCards } from "@/lib/live";
 import { TimeChart } from "@/components/charts";
 import GradeLabel from "@/components/grade-label";
 import ThemeToggle from "@/components/theme-toggle";
 import { AddressTable, BarList, FlowMap, Kpi, Panel, Section } from "@/components/ui";
 import { n0, pct, usd, compact, dayLabel } from "@/lib/fmt";
 
-const T = data.totals;
-const L = data.live;
-const Q = data.concentration;
-const E = data.evm;
-const cov = data.coverage;
-const M = data.last30;
-
-const toTeam = Math.max(T.teamOut - T.teamIn, 0);
-const windowLabel = `${dayLabel(cov.from ?? "")} to ${dayLabel(cov.to ?? "")}`;
-type Row = Record<string, number | string>;
-const weekly = (data.weekly as unknown as Row[]).filter((w) => String(w.w) >= (cov.from ?? "")).slice(0, -1); // drop the partial current week
-const cardsWeekly = (data.weekly as unknown as Row[]).filter((w) => String(w.w) >= "2026-04-13").slice(0, -1);
+export const revalidate = 60; // live CARDS supply / price / gacha activity every minute; history from the hourly pipeline
 
 const A = {
   gacha: "GachaNgyXTU3zFogQ8Z5jR2BLXs8215X2AtEH18VxJq3",
@@ -56,32 +46,45 @@ const ADDRESSES = [
   { name: "EVM gacha (Base, Robinhood Chain)", addr: A.evm, role: "Gacha contract on EVM chains", href: baseScan },
 ];
 
-export default function Page() {
+export default async function Page() {
+  const data = await getData();
+  const T = data.totals;
+  const L = await liveCards(data.live, data.generatedAt);
+  const Q = data.concentration;
+  const E = data.evm;
+  const cov = data.coverage;
+  const M = data.last30;
+
+  const toTeam = Math.max(T.teamOut - T.teamIn, 0);
+  const windowLabel = `${dayLabel(cov.from ?? "")} to ${dayLabel(cov.to ?? "")}`;
+  type Row = Record<string, number | string>;
+  const weekly = (data.weekly as unknown as Row[]).filter((w) => String(w.w) >= (cov.from ?? "")).slice(0, -1); // drop the partial current week
+  const cardsWeekly = (data.weekly as unknown as Row[]).filter((w) => String(w.w) >= "2026-04-13").slice(0, -1);
   return (
-    <main className="mx-auto max-w-[1100px] px-4 py-8 sm:px-6">
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5">
+    <main className="mx-auto max-w-[1100px] px-4 pb-10 pt-5 sm:px-6">
+      <div className="flex justify-end"><ThemeToggle /></div>
+      <header className="mt-2 grid items-end gap-x-12 gap-y-8 md:grid-cols-[minmax(0,1fr)_auto]">
         <div>
-          <h1 className="text-[26px] font-semibold text-text">Collector Crypt</h1>
-          <p className="mt-0.5 max-w-[60ch] text-[14px] text-muted">
-            Onchain data for <a className="underline" href="https://collectorcrypt.com" target="_blank" rel="noreferrer">Collector Crypt</a> gacha pack sales, card buybacks and the CARDS token. Pack data {windowLabel}.
+          <h1 className="page-t">Collector Crypt</h1>
+          <p className="mt-4 max-w-[52ch] text-[15px] leading-relaxed text-muted">
+            Gacha pack sales, card buybacks and the CARDS token, read straight from the chain. Pack data {windowLabel}.
+            {" "}<a className="underline decoration-line underline-offset-2 hover:text-text" href="https://collectorcrypt.com" target="_blank" rel="noreferrer">collectorcrypt.com</a>
           </p>
         </div>
-        <div className="flex items-start gap-3">
-          <div className="hidden md:block">
-            <GradeLabel top="Collector Crypt" line2={`Pack sales, ${cov.days} days`} grade={usd(T.sales)} gradeSub={`${n0(T.packs)} packs`} cert={A.gacha} />
-          </div>
-          <ThemeToggle />
-        </div>
+        <GradeLabel top="Collector Crypt" line2={`Pack sales, ${cov.days} days`} grade={usd(T.sales)} gradeSub={`${n0(T.packs)} packs`} cert={A.gacha} />
       </header>
 
-      <Section title="Key numbers" sub={windowLabel}>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <Section title="Sales, buybacks and CARDS" sub={L.fresh
+        ? `${windowLabel}, updated hourly. Live from Solana at ${L.at.slice(11, 16)} UTC: ${n0(L.txLastHour ?? 0)} gacha transactions in the last hour, ${usd(L.gachaFloat)} USDC in the machine.`
+        : `${windowLabel}, updated hourly.`}>
+        <div className="kpis grid grid-cols-2 md:grid-cols-4">
           <Kpi label="Pack sales" value={usd(T.sales)} note={`${n0(T.packs)} packs`} />
           <Kpi label="Card buybacks paid" value={usd(T.buybacks)} note={`${pct(T.buybacks / T.sales)} of sales`} />
           <Kpi label="Sales minus buybacks" value={usd(T.sales - T.buybacks)} note={`${pct(1 - T.buybacks / T.sales)} of sales`} />
           <Kpi label="Buyers" value={n0(Q.buyers)} note="Unique paying wallets" />
           <Kpi label="Pack sales, 30d" value={usd(M.sales)} note={`${n0(M.packs)} packs`} />
-          <Kpi label="CARDS price" value={L.cardsPrice ? `$${L.cardsPrice.toFixed(4)}` : "n/a"} note="Latest buyback" />
+          <Kpi label="CARDS price" value={L.marketPrice ? `$${L.marketPrice.toFixed(4)}` : L.cardsPrice ? `$${L.cardsPrice.toFixed(4)}` : "n/a"}
+            note={L.marketPrice ? `Live, Jupiter${L.cardsPrice ? ` · last buyback $${L.cardsPrice.toFixed(4)}` : ""}` : "Latest buyback"} />
           <Kpi label="CARDS burned" value={compact(L.burnedBySupply)} note={`${pct(L.burnedBySupply / L.maxSupply, 2)} of 2B supply`} />
           <Kpi label="CARDS buyback spent" value={usd(T.cardsBoughtUsd)} note={`${compact(T.cardsBought)} CARDS since Apr 2026`} />
         </div>
@@ -108,8 +111,8 @@ export default function Page() {
           ]} />
       </Section>
 
-      <Section title="Charts">
-        <div className="grid gap-4 md:grid-cols-2">
+      <Section title="Week by week">
+        <div className="grid gap-x-8 gap-y-12 md:grid-cols-2">
           <Panel title="Pack sales vs card buybacks per week" source={SRC.gacha}>
             <TimeChart rows={weekly.map((w) => ({ d: String(w.w), sales: Number(w.sales), buybacks: Number(w.buybacks) }))} prefix="$"
               series={[{ key: "sales", name: "Pack sales", color: "var(--accent)", type: "line" }, { key: "buybacks", name: "Card buybacks", color: "var(--accent2)", type: "line" }]} />
@@ -152,11 +155,11 @@ export default function Page() {
           <li>Storefront and pack price: the memo on each payment (format <span className="text-text">store-id:open</span>).</li>
           <li>CARDS: transfers of the <a className="underline" href={scan(A.bot)} target="_blank" rel="noreferrer">buyback bot</a> and <a className="underline" href={scan(A.burn)} target="_blank" rel="noreferrer">burn wallet</a>; burned total from the <a className="underline" href={scan(A.mint)} target="_blank" rel="noreferrer">mint</a> supply ({compact(T.cardsBurned, 2)} traced to the burn wallet).</li>
           <li>EVM: gacha contract logs on <a className="underline" href={baseScan} target="_blank" rel="noreferrer">Base</a> and Robinhood Chain.</li>
-          <li>Solana data via Helius and Alchemy RPC. Updated daily.</li>
+          <li>Solana data via Alchemy RPC. Updated hourly.</li>
         </ul>
       </Section>
 
-      <footer className="mt-12 border-t border-line pt-5 text-[13px] text-muted">
+      <footer className="mt-16 border-t-2 border-text pt-5 text-[13px] text-muted">
         By <a className="underline" href="https://paultimofeev.com">Paul Timofeev</a>. Not affiliated with Collector Crypt.
       </footer>
     </main>

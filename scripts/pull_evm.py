@@ -1,6 +1,6 @@
 """Pull the EVM gacha contract's money flows on Base and Robinhood Chain.
 
-Robinhood Chain: plain eth_getLogs on the public RPC (it serves 2M-block ranges) for
+Robinhood Chain: plain eth_getLogs on the public RPC (100k-block ranges since Nov 2026) for
   Paid(address indexed payer, address indexed token, uint256 amount, string memo)       -> pack purchase
   SoldBack(address indexed seller, uint256 indexed tokenId, uint256 amount, uint256 nonce) -> card sold back
 Base: free public RPCs refuse historical getLogs, so Base uses Alchemy getAssetTransfers instead:
@@ -63,10 +63,18 @@ def block_at(url, ts, head):
 
 def pull_robinhood():
     head = int(call(RH_RPC, "eth_blockNumber", []), 16)
-    # the RPC keeps no historical state (no getCode search), so start a few days before the machine's
-    # 2026-09-25 launch, found by block timestamp
-    start, step = block_at(RH_RPC, 1789862400, head), 500_000
-    rows, ts_cache, b = [], {}, start
+    # Incremental: keep the rows on file and resume an hour before the newest one (duplicates dropped below).
+    # First run: a few days before the machine's 2026-09-25 launch, found by block timestamp
+    # (the RPC keeps no historical state, so no getCode search).
+    path = ROOT / "data/raw/evm_robinhood.csv"
+    old = []
+    if path.exists():
+        with open(path, newline="") as f:
+            old = [r for r in csv.reader(f)][1:]
+    since = max((int(r[0]) for r in old), default=1789862400 + 3600) - 3600
+    start, step = block_at(RH_RPC, since, head), 100_000   # the public RPC caps eth_getLogs at 100k blocks (Nov 2026)
+    print(f"robinhood: {len(old):,} rows on file, scanning blocks {start:,} -> {head:,}", flush=True)
+    rows, ts_cache, b = [[int(r[0])] + r[1:] for r in old], {}, start
     while b <= head:
         e = min(b + step - 1, head)
         # one topic per query: the RPC only allows 2M-block ranges with a single value per topic position
@@ -87,7 +95,12 @@ def pull_robinhood():
                 rows.append([ts_cache[bn], "soldback", "0x" + lg["topics"][1][-40:], "", int(data[0:64], 16) / 1e6,
                              int(lg["topics"][2], 16), lg["transactionHash"]])
         b = e + 1
-    return rows
+    seen, out = set(), []
+    for r in rows:   # drop the overlap re-read from the last hour
+        k = (r[6], r[1], str(r[2]).lower(), str(r[5]))
+        if k not in seen:
+            seen.add(k); out.append(r)
+    return out
 
 
 def pull_base():

@@ -6,3 +6,6 @@ node_modules
 __pycache__
 .vercel
 *.tsbuildinfo
+
+# raw per-day gacha files live in the GitHub Actions cache (see .github/workflows/daily.yml), not in git
+/data/raw/gacha/

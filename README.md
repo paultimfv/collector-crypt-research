@@ -8,10 +8,10 @@ Live: https://collector-crypt-dashboard-delta.vercel.app
 
 | Data | Source | Refresh |
 |---|---|---|
-| Pack sales, card buybacks | USDC, USDT, JupUSD and CASH transfers in and out of the gacha wallet, Helius and Alchemy RPC | daily |
-| Storefront, pack price | Memo on each payment (`store-id:open` / `:buyback`) | daily |
-| CARDS buyback and burns | Buyback bot and burn wallet transfers, CARDS mint supply | daily |
-| EVM pack sales | Gacha contract logs on Base (Alchemy) and Robinhood Chain (RPC) | daily |
+| Pack sales, card buybacks | USDC, USDT, JupUSD and CASH transfers in and out of the gacha wallet, Helius and Alchemy RPC | hourly |
+| Storefront, pack price | Memo on each payment (`store-id:open` / `:buyback`) | hourly |
+| CARDS buyback and burns | Buyback bot and burn wallet transfers, CARDS mint supply | hourly |
+| EVM pack sales | Gacha contract logs on Base (Alchemy) and Robinhood Chain (RPC) | hourly |
 
 Addresses are in `scripts/addresses.py` and on the dashboard. Method details: `PIPELINE.md`.
 
