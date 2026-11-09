@@ -406,3 +406,5 @@ ts,kind,dir,amount,token,counterparty,clmm,sig
 1793856925,transfer,in,750000.0,USDC,A2qdjcuacp6gMVi8TxmEb2vsMZsHqCjM9CGjFeJ2bb2z,0,4RUndDKvt5PFxyeW6UJa
 1793857244,transfer,out,750000.0,USDC,DFEstpYN3fsz93AC9v2ujzPPngPgodqH2xxopuyfSsAE,0,291918fMmKhyfuzgHm24
 1793931702,transfer,in,0.0001,USDC,AtcqxWE9fPehWcLgqsvuwD9C7iaxiWs2qaxCiDcS8aQ3,0,bgYh32iP9FdRmmEkLcQH
+1794231955,transfer,in,296941.177278,USDC,A2qdjcuacp6gMVi8TxmEb2vsMZsHqCjM9CGjFeJ2bb2z,0,4DvmuardzCYYMLLy1GPU
+1794231975,transfer,in,1005000.1718,USDC,9DrvZvyWh1HuAoZxvYWMvkf2XCzryCpGgHqrMjyDWpmo,0,2HYZerZdojfqTssLwNau
