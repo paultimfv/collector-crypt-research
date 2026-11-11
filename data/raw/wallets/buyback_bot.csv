@@ -199574,3 +199574,5 @@ ts,kind,dir,amount,token,counterparty,clmm,sig
 1794435033,transfer,in,7.739922,CARDS,HnhpJPJgBG2KwniMTNW8cVBHvk1hFog3RC3kjnyc23tD,1,4oXxR7vBpRqyuREdyvSL
 1794435122,transfer,out,0.486355,USDC,HnhpJPJgBG2KwniMTNW8cVBHvk1hFog3RC3kjnyc23tD,1,2LmcuwF2z83pFwsqzDdG
 1794435122,transfer,in,2.421506,CARDS,HnhpJPJgBG2KwniMTNW8cVBHvk1hFog3RC3kjnyc23tD,1,2LmcuwF2z83pFwsqzDdG
+1794438256,transfer,out,0.152669,USDC,HnhpJPJgBG2KwniMTNW8cVBHvk1hFog3RC3kjnyc23tD,1,qsC37d7qjabuYRkCyEk2
+1794438256,transfer,in,0.787234,CARDS,HnhpJPJgBG2KwniMTNW8cVBHvk1hFog3RC3kjnyc23tD,1,qsC37d7qjabuYRkCyEk2
