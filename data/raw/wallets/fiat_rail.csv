@@ -133,3 +133,4 @@ ts,kind,dir,amount,token,counterparty,clmm,sig
 1790896025,transfer,out,0.0,USDC,99EeRum8syGDj3rEVMxk4TSs1vzJaP9FADZvDVb6VM3G,0,4n15J3JbzaVmaxRqSb4C
 1791426176,transfer,out,371416.2,USDC,8373hLiAEXxaJ3oV7SRzx4KHwurEg9rEG98tUPj1sdtX,0,5MdxXpKKazsbDDs82SJR
 1791426176,transfer,out,0.0,USDC,99EeRum8syGDj3rEVMxk4TSs1vzJaP9FADZvDVb6VM3G,0,5MdxXpKKazsbDDs82SJR
+1794957466,transfer,in,0.001,USDC,98p3LggsvRbMngri7N6e3tfqKsZuWdPKWvT9YhTZCsAZ,0,2ntibL2sf9sxkrMwhKNU
